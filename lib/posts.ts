@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
+import { remark } from 'remark';
+import remarkHtml from 'remark-html';
 
 const postsDirectory = path.join(process.cwd(), 'posts')
 console.log('process.cwd()', process.cwd());
@@ -40,4 +42,37 @@ export function getSortedPostsData() {
       return -1
     }
   })
+}
+
+export function getAllPostIds() {
+  const fileNames = fs.readdirSync(postsDirectory)
+  return fileNames.map(fileName => {
+    return {
+      params: {
+        id: fileName.replace(/\.md$/, '')
+      }
+    }
+  })
+}
+
+export async function getPostData(id: string) {
+  // 파일 경로에서 파일명 추출
+  const fullPath = path.join(postsDirectory, `${id}.md`)
+  // markdown 파일을 utf-8로 읽어온다
+  const fileContents = fs.readFileSync(fullPath, 'utf-8')
+
+  // markdown 내용을 데이터 형태로 변환
+  const matterResult = matter(fileContents);
+
+  // html string으로 변환
+  const processedContent = await remark()
+    .use(remarkHtml)
+    .process(matterResult.content)
+  const contentHtml = processedContent.toString()
+
+  return {
+    id,
+    contentHtml,
+    ...(matterResult.data as { date: string;  title: string})
+  }
 }
